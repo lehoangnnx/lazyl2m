@@ -14,14 +14,14 @@ const maxLogEntries = 1000
 
 // ProxyManager manages the CLIProxyAPI process
 type ProxyManager struct {
-	config      *Config
-	status      ProxyStatus
-	cmd         *exec.Cmd
-	authFiles   []AuthFile
-	usageStats  UsageStats
-	quotaInfos  []QuotaInfo
-	logEntries  []LogEntry
-	mutex       sync.RWMutex
+	config     *Config
+	status     ProxyStatus
+	cmd        *exec.Cmd
+	authFiles  []AuthFile
+	usageStats UsageStats
+	quotaInfos []QuotaInfo
+	logEntries []LogEntry
+	mutex      sync.RWMutex
 }
 
 // NewProxyManager creates a new proxy manager
@@ -48,11 +48,11 @@ func (pm *ProxyManager) Start() error {
 	// Note: In a real implementation, this would start the actual CLIProxyAPI binary
 	// For now, we'll simulate it
 	pm.AddLog(LogLevelInfo, fmt.Sprintf("Starting proxy server on port %d", pm.config.Port))
-	
+
 	// Simulate starting the process
 	pm.status.Running = true
 	pm.AddLog(LogLevelInfo, "Proxy server started successfully")
-	
+
 	return nil
 }
 
@@ -66,17 +66,17 @@ func (pm *ProxyManager) Stop() error {
 	}
 
 	pm.AddLog(LogLevelInfo, "Stopping proxy server")
-	
+
 	if pm.cmd != nil && pm.cmd.Process != nil {
 		if err := pm.cmd.Process.Kill(); err != nil {
 			pm.AddLog(LogLevelError, fmt.Sprintf("Failed to kill process: %v", err))
 		}
 		pm.cmd = nil
 	}
-	
+
 	pm.status.Running = false
 	pm.AddLog(LogLevelInfo, "Proxy server stopped")
-	
+
 	return nil
 }
 
@@ -101,7 +101,7 @@ func (pm *ProxyManager) FetchAuthFiles() error {
 	// In a real implementation, this would call the API
 	// For now, we'll simulate some data
 	url := fmt.Sprintf("http://localhost:%d/management/auth-files", pm.config.Port)
-	
+
 	resp, err := http.Get(url)
 	if err != nil {
 		// Simulate some mock data when API is not available
@@ -122,7 +122,7 @@ func (pm *ProxyManager) FetchAuthFiles() error {
 
 	pm.authFiles = authFiles
 	pm.AddLog(LogLevelDebug, fmt.Sprintf("Fetched %d auth files", len(authFiles)))
-	
+
 	return nil
 }
 
@@ -138,7 +138,7 @@ func (pm *ProxyManager) FetchUsageStats() error {
 
 	// In a real implementation, this would call the API
 	url := fmt.Sprintf("http://localhost:%d/management/usage-statistics", pm.config.Port)
-	
+
 	resp, err := http.Get(url)
 	if err != nil {
 		// Simulate mock data
@@ -160,7 +160,7 @@ func (pm *ProxyManager) FetchUsageStats() error {
 	stats.LastUpdated = time.Now()
 	pm.usageStats = stats
 	pm.AddLog(LogLevelDebug, "Updated usage statistics")
-	
+
 	return nil
 }
 
@@ -182,7 +182,7 @@ func (pm *ProxyManager) GetUsageStats() UsageStats {
 func (pm *ProxyManager) GetQuotaInfos() []QuotaInfo {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
-	
+
 	// Generate quota info from auth files
 	quotas := []QuotaInfo{}
 	for _, auth := range pm.authFiles {
@@ -190,14 +190,14 @@ func (pm *ProxyManager) GetQuotaInfos() []QuotaInfo {
 		used := 1000 + len(auth.ID)*100
 		limit := 10000
 		percent := float64(used) / float64(limit) * 100
-		
+
 		status := "ok"
 		if percent > 90 {
 			status = "exceeded"
 		} else if percent > 70 {
 			status = "warning"
 		}
-		
+
 		resetTime := time.Now().Add(24 * time.Hour)
 		quotas = append(quotas, QuotaInfo{
 			AccountID:    auth.ID,
@@ -210,7 +210,7 @@ func (pm *ProxyManager) GetQuotaInfos() []QuotaInfo {
 			ResetTime:    &resetTime,
 		})
 	}
-	
+
 	return quotas
 }
 
@@ -228,9 +228,9 @@ func (pm *ProxyManager) AddLog(level LogLevel, message string) {
 		Level:     level,
 		Message:   message,
 	}
-	
+
 	pm.logEntries = append(pm.logEntries, entry)
-	
+
 	// Keep only last maxLogEntries
 	if len(pm.logEntries) > maxLogEntries {
 		pm.logEntries = pm.logEntries[len(pm.logEntries)-maxLogEntries:]

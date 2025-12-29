@@ -8,16 +8,16 @@ import (
 type AIProvider string
 
 const (
-	ProviderGemini         AIProvider = "gemini"
-	ProviderClaude         AIProvider = "claude"
-	ProviderCodex          AIProvider = "codex"
-	ProviderQwen           AIProvider = "qwen"
-	ProviderIFlow          AIProvider = "iflow"
-	ProviderAntigravity    AIProvider = "antigravity"
-	ProviderVertex         AIProvider = "vertex"
-	ProviderKiro           AIProvider = "kiro"
-	ProviderGitHubCopilot  AIProvider = "github_copilot"
-	ProviderCursor         AIProvider = "cursor"
+	ProviderGemini        AIProvider = "gemini"
+	ProviderClaude        AIProvider = "claude"
+	ProviderCodex         AIProvider = "codex"
+	ProviderQwen          AIProvider = "qwen"
+	ProviderIFlow         AIProvider = "iflow"
+	ProviderAntigravity   AIProvider = "antigravity"
+	ProviderVertex        AIProvider = "vertex"
+	ProviderKiro          AIProvider = "kiro"
+	ProviderGitHubCopilot AIProvider = "github_copilot"
+	ProviderCursor        AIProvider = "cursor"
 )
 
 // ProviderInfo holds display information for a provider
@@ -156,15 +156,15 @@ const (
 
 // Config represents application configuration
 type Config struct {
-	Port                    int             `json:"port"`
-	RoutingStrategy         RoutingStrategy `json:"routing_strategy"`
-	AutoStart               bool            `json:"auto_start"`
-	DebugMode               bool            `json:"debug_mode"`
-	LogToFile               bool            `json:"log_to_file"`
-	UsageStatsEnabled       bool            `json:"usage_stats_enabled"`
-	RequestRetryCount       int             `json:"request_retry_count"`
-	APIKeys                 []string        `json:"api_keys"`
-	QuotaExceededBehavior   string          `json:"quota_exceeded_behavior"` // "skip", "stop", "continue"
+	Port                  int             `json:"port"`
+	RoutingStrategy       RoutingStrategy `json:"routing_strategy"`
+	AutoStart             bool            `json:"auto_start"`
+	DebugMode             bool            `json:"debug_mode"`
+	LogToFile             bool            `json:"log_to_file"`
+	UsageStatsEnabled     bool            `json:"usage_stats_enabled"`
+	RequestRetryCount     int             `json:"request_retry_count"`
+	APIKeys               []string        `json:"api_keys"`
+	QuotaExceededBehavior string          `json:"quota_exceeded_behavior"` // "skip", "stop", "continue"
 }
 
 // NewDefaultConfig returns a config with default values

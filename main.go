@@ -88,12 +88,12 @@ func main() {
 		currentScreen = screenName
 		content.SwitchToPage(screenName)
 		sidebar.SetCurrentItem(index)
-		
+
 		// Update the screen
 		if screen, ok := screens[screenName]; ok {
 			screen.Update()
 		}
-		
+
 		app.SetFocus(content)
 	}
 

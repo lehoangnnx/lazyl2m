@@ -24,49 +24,49 @@ type DashboardScreen struct {
 
 func NewDashboardScreen(pm *ProxyManager) *DashboardScreen {
 	ds := &DashboardScreen{pm: pm}
-	
+
 	// Title
 	title := tview.NewTextView().
 		SetText("[::b]Dashboard[::-]").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
-	
+
 	// Server status section
 	ds.statusText = tview.NewTextView().
 		SetDynamicColors(true).
 		SetScrollable(false)
-	
+
 	statusBox := tview.NewFlex().
 		SetDirection(tview.FlexRow).
 		AddItem(tview.NewTextView().SetText("[yellow::b]Server Status[::-]").SetDynamicColors(true), 1, 0, false).
 		AddItem(ds.statusText, 0, 1, false)
-	
+
 	// Usage statistics section
 	ds.statsText = tview.NewTextView().
 		SetDynamicColors(true).
 		SetScrollable(false)
-	
+
 	statsBox := tview.NewFlex().
 		SetDirection(tview.FlexRow).
 		AddItem(tview.NewTextView().SetText("[yellow::b]Usage Statistics[::-]").SetDynamicColors(true), 1, 0, false).
 		AddItem(ds.statsText, 0, 1, false)
-	
+
 	// Connected accounts section
 	ds.accountsText = tview.NewTextView().
 		SetDynamicColors(true).
 		SetScrollable(false)
-	
+
 	accountsBox := tview.NewFlex().
 		SetDirection(tview.FlexRow).
 		AddItem(tview.NewTextView().SetText("[yellow::b]Connected Accounts[::-]").SetDynamicColors(true), 1, 0, false).
 		AddItem(ds.accountsText, 0, 1, false)
-	
+
 	// Help text
 	help := tview.NewTextView().
 		SetText("[gray]Press 's' to toggle server | 'r' to refresh | Tab to switch focus[-]").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
-	
+
 	// Main layout
 	ds.view = tview.NewFlex().
 		SetDirection(tview.FlexRow).
@@ -79,7 +79,7 @@ func NewDashboardScreen(pm *ProxyManager) *DashboardScreen {
 		AddItem(accountsBox, 0, 1, false).
 		AddItem(tview.NewBox(), 1, 0, false).
 		AddItem(help, 1, 0, false)
-	
+
 	ds.Update()
 	return ds
 }
@@ -92,7 +92,7 @@ func (ds *DashboardScreen) Update() {
 	status := ds.pm.GetStatus()
 	stats := ds.pm.GetUsageStats()
 	authFiles := ds.pm.GetAuthFiles()
-	
+
 	// Update status
 	statusColor := "[red]"
 	statusText := "Stopped"
@@ -104,15 +104,15 @@ func (ds *DashboardScreen) Update() {
 		"%s● %s[-]\nPort: [white]%d[-]",
 		statusColor, statusText, status.Port,
 	))
-	
+
 	// Update statistics
 	ds.statsText.SetText(fmt.Sprintf(
 		"Total Requests:   [white]%d[-]\n"+
-		"Success Requests: [green]%d[-]\n"+
-		"Failed Requests:  [red]%d[-]\n"+
-		"Total Tokens:     [cyan]%d[-]\n"+
-		"Success Rate:     [yellow]%.1f%%[-]\n"+
-		"Last Updated:     [gray]%s[-]",
+			"Success Requests: [green]%d[-]\n"+
+			"Failed Requests:  [red]%d[-]\n"+
+			"Total Tokens:     [cyan]%d[-]\n"+
+			"Success Rate:     [yellow]%.1f%%[-]\n"+
+			"Last Updated:     [gray]%s[-]",
 		stats.TotalRequests,
 		stats.SuccessRequests,
 		stats.FailedRequests,
@@ -120,7 +120,7 @@ func (ds *DashboardScreen) Update() {
 		stats.SuccessRate,
 		stats.LastUpdated.Format("15:04:05"),
 	))
-	
+
 	// Update accounts
 	accountsList := ""
 	for _, auth := range authFiles {
@@ -146,21 +146,21 @@ type QuotaScreen struct {
 
 func NewQuotaScreen(pm *ProxyManager) *QuotaScreen {
 	qs := &QuotaScreen{pm: pm}
-	
+
 	title := tview.NewTextView().
 		SetText("[::b]Quota Usage[::-]").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
-	
+
 	qs.table = tview.NewTable().
 		SetBorders(false).
 		SetSelectable(false, false)
-	
+
 	help := tview.NewTextView().
 		SetText("[gray]Press 'r' to refresh | Tab to switch focus[-]").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
-	
+
 	qs.view = tview.NewFlex().
 		SetDirection(tview.FlexRow).
 		AddItem(title, 1, 0, false).
@@ -168,7 +168,7 @@ func NewQuotaScreen(pm *ProxyManager) *QuotaScreen {
 		AddItem(qs.table, 0, 1, false).
 		AddItem(tview.NewBox(), 1, 0, false).
 		AddItem(help, 1, 0, false)
-	
+
 	qs.Update()
 	return qs
 }
@@ -179,7 +179,7 @@ func (qs *QuotaScreen) GetView() tview.Primitive {
 
 func (qs *QuotaScreen) Update() {
 	qs.table.Clear()
-	
+
 	// Headers
 	headers := []string{"Provider", "Account", "Used", "Limit", "Usage %", "Status", "Reset Time"}
 	for col, header := range headers {
@@ -188,12 +188,12 @@ func (qs *QuotaScreen) Update() {
 			SetSelectable(false)
 		qs.table.SetCell(0, col, cell)
 	}
-	
+
 	// Data rows
 	quotas := qs.pm.GetQuotaInfos()
 	for row, quota := range quotas {
 		info := GetProviderInfo(quota.Provider)
-		
+
 		// Status color
 		statusColor := "[green]"
 		if quota.Status == "warning" {
@@ -201,13 +201,13 @@ func (qs *QuotaScreen) Update() {
 		} else if quota.Status == "exceeded" {
 			statusColor = "[red]"
 		}
-		
+
 		// Reset time
 		resetTime := "N/A"
 		if quota.ResetTime != nil {
 			resetTime = quota.ResetTime.Format("2006-01-02 15:04")
 		}
-		
+
 		cells := []string{
 			fmt.Sprintf("%s %s", info.Symbol, info.Name),
 			quota.AccountName,
@@ -217,7 +217,7 @@ func (qs *QuotaScreen) Update() {
 			fmt.Sprintf("%s%s[-]", statusColor, quota.Status),
 			resetTime,
 		}
-		
+
 		for col, text := range cells {
 			cell := tview.NewTableCell(text).
 				SetAlign(tview.AlignLeft).
@@ -236,19 +236,19 @@ type ProvidersScreen struct {
 
 func NewProvidersScreen(pm *ProxyManager) *ProvidersScreen {
 	ps := &ProvidersScreen{pm: pm}
-	
+
 	title := tview.NewTextView().
 		SetText("[::b]AI Providers[::-]").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
-	
+
 	ps.list = tview.NewList()
-	
+
 	help := tview.NewTextView().
 		SetText("[gray]Press Enter to manage accounts | Tab to switch focus[-]").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
-	
+
 	ps.view = tview.NewFlex().
 		SetDirection(tview.FlexRow).
 		AddItem(title, 1, 0, false).
@@ -256,7 +256,7 @@ func NewProvidersScreen(pm *ProxyManager) *ProvidersScreen {
 		AddItem(ps.list, 0, 1, false).
 		AddItem(tview.NewBox(), 1, 0, false).
 		AddItem(help, 1, 0, false)
-	
+
 	ps.Update()
 	return ps
 }
@@ -267,13 +267,13 @@ func (ps *ProvidersScreen) GetView() tview.Primitive {
 
 func (ps *ProvidersScreen) Update() {
 	ps.list.Clear()
-	
+
 	providers := GetAllProviders()
 	authFiles := ps.pm.GetAuthFiles()
-	
+
 	for _, provider := range providers {
 		info := GetProviderInfo(provider)
-		
+
 		// Count accounts for this provider
 		count := 0
 		for _, auth := range authFiles {
@@ -281,10 +281,10 @@ func (ps *ProvidersScreen) Update() {
 				count++
 			}
 		}
-		
+
 		mainText := fmt.Sprintf("%s %s", info.Symbol, info.Name)
 		secondaryText := fmt.Sprintf("%d account(s)", count)
-		
+
 		ps.list.AddItem(mainText, secondaryText, 0, nil)
 	}
 }
@@ -297,21 +297,21 @@ type AgentsScreen struct {
 
 func NewAgentsScreen() *AgentsScreen {
 	as := &AgentsScreen{}
-	
+
 	title := tview.NewTextView().
 		SetText("[::b]CLI Agents[::-]").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
-	
+
 	as.table = tview.NewTable().
 		SetBorders(false).
 		SetSelectable(true, false)
-	
+
 	help := tview.NewTextView().
 		SetText("[gray]Press Enter to configure | Tab to switch focus[-]").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
-	
+
 	as.view = tview.NewFlex().
 		SetDirection(tview.FlexRow).
 		AddItem(title, 1, 0, false).
@@ -319,7 +319,7 @@ func NewAgentsScreen() *AgentsScreen {
 		AddItem(as.table, 0, 1, false).
 		AddItem(tview.NewBox(), 1, 0, false).
 		AddItem(help, 1, 0, false)
-	
+
 	as.Update()
 	return as
 }
@@ -330,7 +330,7 @@ func (as *AgentsScreen) GetView() tview.Primitive {
 
 func (as *AgentsScreen) Update() {
 	as.table.Clear()
-	
+
 	// Headers
 	headers := []string{"Agent Name", "Installed", "Configured"}
 	for col, header := range headers {
@@ -339,7 +339,7 @@ func (as *AgentsScreen) Update() {
 			SetSelectable(false)
 		as.table.SetCell(0, col, cell)
 	}
-	
+
 	// Data rows
 	agents := GetAllAgents()
 	for row, agent := range agents {
@@ -347,18 +347,18 @@ func (as *AgentsScreen) Update() {
 		if agent.Installed {
 			installedText = "[green]✓ Yes[-]"
 		}
-		
+
 		configuredText := "[red]✗ No[-]"
 		if agent.Configured {
 			configuredText = "[green]✓ Yes[-]"
 		}
-		
+
 		cells := []string{
 			agent.Name,
 			installedText,
 			configuredText,
 		}
-		
+
 		for col, text := range cells {
 			cell := tview.NewTableCell(text).
 				SetAlign(tview.AlignLeft)
@@ -377,19 +377,19 @@ type APIKeysScreen struct {
 
 func NewAPIKeysScreen(pm *ProxyManager, cfg *Config) *APIKeysScreen {
 	aks := &APIKeysScreen{pm: pm, cfg: cfg}
-	
+
 	title := tview.NewTextView().
 		SetText("[::b]API Keys[::-]").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
-	
+
 	aks.list = tview.NewList()
-	
+
 	help := tview.NewTextView().
 		SetText("[gray]Press 'g' to generate new key | 'd' to delete | Tab to switch focus[-]").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
-	
+
 	aks.view = tview.NewFlex().
 		SetDirection(tview.FlexRow).
 		AddItem(title, 1, 0, false).
@@ -397,7 +397,7 @@ func NewAPIKeysScreen(pm *ProxyManager, cfg *Config) *APIKeysScreen {
 		AddItem(aks.list, 0, 1, false).
 		AddItem(tview.NewBox(), 1, 0, false).
 		AddItem(help, 1, 0, false)
-	
+
 	aks.Update()
 	return aks
 }
@@ -408,19 +408,19 @@ func (aks *APIKeysScreen) GetView() tview.Primitive {
 
 func (aks *APIKeysScreen) Update() {
 	aks.list.Clear()
-	
+
 	if len(aks.cfg.APIKeys) == 0 {
 		aks.list.AddItem("[gray]No API keys generated[-]", "", 0, nil)
 		return
 	}
-	
+
 	for i, key := range aks.cfg.APIKeys {
 		// Mask the key for display
 		masked := key
 		if len(key) > 12 {
 			masked = key[:8] + "..." + key[len(key)-4:]
 		}
-		
+
 		mainText := fmt.Sprintf("Key %d: %s", i+1, masked)
 		aks.list.AddItem(mainText, "", 0, nil)
 	}
@@ -435,12 +435,12 @@ type LogsScreen struct {
 
 func NewLogsScreen(pm *ProxyManager) *LogsScreen {
 	ls := &LogsScreen{pm: pm}
-	
+
 	title := tview.NewTextView().
 		SetText("[::b]Logs[::-]").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
-	
+
 	ls.textView = tview.NewTextView().
 		SetDynamicColors(true).
 		SetScrollable(true).
@@ -448,12 +448,12 @@ func NewLogsScreen(pm *ProxyManager) *LogsScreen {
 			// Auto-scroll to bottom
 			ls.textView.ScrollToEnd()
 		})
-	
+
 	help := tview.NewTextView().
 		SetText("[gray]Press 'c' to clear logs | Tab to switch focus[-]").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
-	
+
 	ls.view = tview.NewFlex().
 		SetDirection(tview.FlexRow).
 		AddItem(title, 1, 0, false).
@@ -461,7 +461,7 @@ func NewLogsScreen(pm *ProxyManager) *LogsScreen {
 		AddItem(ls.textView, 0, 1, false).
 		AddItem(tview.NewBox(), 1, 0, false).
 		AddItem(help, 1, 0, false)
-	
+
 	ls.Update()
 	return ls
 }
@@ -472,7 +472,7 @@ func (ls *LogsScreen) GetView() tview.Primitive {
 
 func (ls *LogsScreen) Update() {
 	logs := ls.pm.GetLogs()
-	
+
 	var logText strings.Builder
 	for _, log := range logs {
 		color := "white"
@@ -486,7 +486,7 @@ func (ls *LogsScreen) Update() {
 		case LogLevelDebug:
 			color = "gray"
 		}
-		
+
 		logText.WriteString(fmt.Sprintf(
 			"[gray]%s[-] [%s]%5s[-] %s\n",
 			log.Timestamp.Format("15:04:05"),
@@ -495,11 +495,11 @@ func (ls *LogsScreen) Update() {
 			log.Message,
 		))
 	}
-	
+
 	if logText.Len() == 0 {
 		logText.WriteString("[gray]No logs available[-]")
 	}
-	
+
 	ls.textView.SetText(logText.String())
 }
 
@@ -514,20 +514,20 @@ type SettingsScreen struct {
 
 func NewSettingsScreen(pm *ProxyManager, cfg *Config, app *tview.Application) *SettingsScreen {
 	ss := &SettingsScreen{pm: pm, cfg: cfg, app: app}
-	
+
 	title := tview.NewTextView().
 		SetText("[::b]Settings[::-]").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
-	
+
 	ss.form = tview.NewForm()
 	ss.buildForm()
-	
+
 	help := tview.NewTextView().
 		SetText("[gray]Use arrow keys to navigate | Enter to edit | Tab to switch focus[-]").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true)
-	
+
 	ss.view = tview.NewFlex().
 		SetDirection(tview.FlexRow).
 		AddItem(title, 1, 0, false).
@@ -535,7 +535,7 @@ func NewSettingsScreen(pm *ProxyManager, cfg *Config, app *tview.Application) *S
 		AddItem(ss.form, 0, 1, false).
 		AddItem(tview.NewBox(), 1, 0, false).
 		AddItem(help, 1, 0, false)
-	
+
 	return ss
 }
 
@@ -549,7 +549,7 @@ func (ss *SettingsScreen) Update() {
 
 func (ss *SettingsScreen) buildForm() {
 	ss.form.Clear(true)
-	
+
 	// Port
 	ss.form.AddInputField("Port", fmt.Sprintf("%d", ss.cfg.Port), 20, nil, func(text string) {
 		var port int
@@ -558,7 +558,7 @@ func (ss *SettingsScreen) buildForm() {
 			ss.cfg.Port = port
 		}
 	})
-	
+
 	// Routing Strategy
 	strategyIndex := 0
 	if ss.cfg.RoutingStrategy == RoutingFillFirst {
@@ -571,27 +571,27 @@ func (ss *SettingsScreen) buildForm() {
 			ss.cfg.RoutingStrategy = RoutingFillFirst
 		}
 	})
-	
+
 	// Auto-start
 	ss.form.AddCheckbox("Auto-start Server", ss.cfg.AutoStart, func(checked bool) {
 		ss.cfg.AutoStart = checked
 	})
-	
+
 	// Debug Mode
 	ss.form.AddCheckbox("Debug Mode", ss.cfg.DebugMode, func(checked bool) {
 		ss.cfg.DebugMode = checked
 	})
-	
+
 	// Log to File
 	ss.form.AddCheckbox("Log to File", ss.cfg.LogToFile, func(checked bool) {
 		ss.cfg.LogToFile = checked
 	})
-	
+
 	// Usage Stats
 	ss.form.AddCheckbox("Usage Statistics", ss.cfg.UsageStatsEnabled, func(checked bool) {
 		ss.cfg.UsageStatsEnabled = checked
 	})
-	
+
 	// Request Retry Count
 	ss.form.AddInputField("Request Retry Count", fmt.Sprintf("%d", ss.cfg.RequestRetryCount), 20, nil, func(text string) {
 		var count int
@@ -600,7 +600,7 @@ func (ss *SettingsScreen) buildForm() {
 			ss.cfg.RequestRetryCount = count
 		}
 	})
-	
+
 	// Buttons
 	ss.form.AddButton("Save", func() {
 		if err := SaveConfig(ss.cfg); err != nil {
@@ -609,7 +609,7 @@ func (ss *SettingsScreen) buildForm() {
 			ss.pm.AddLogExternal(LogLevelInfo, "Configuration saved successfully")
 		}
 	})
-	
+
 	ss.form.AddButton("Reset", func() {
 		ss.cfg = NewDefaultConfig()
 		ss.buildForm()
