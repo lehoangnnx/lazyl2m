@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os/exec"
 	"time"
 )
 
@@ -130,20 +131,37 @@ type LogEntry struct {
 // Agent represents a CLI agent
 type Agent struct {
 	Name       string
+	Command    string // Command to check if installed
 	Installed  bool
 	Configured bool
 }
 
-// GetAllAgents returns all supported CLI agents
+// checkCommandExists checks if a command exists in PATH
+func checkCommandExists(command string) bool {
+	_, err := exec.LookPath(command)
+	return err == nil
+}
+
+// GetAllAgents returns all supported CLI agents with real detection
 func GetAllAgents() []Agent {
-	return []Agent{
-		{Name: "Claude Code", Installed: false, Configured: false},
-		{Name: "Codex CLI", Installed: false, Configured: false},
-		{Name: "Gemini CLI", Installed: false, Configured: false},
-		{Name: "Amp CLI", Installed: false, Configured: false},
-		{Name: "OpenCode", Installed: false, Configured: false},
-		{Name: "Factory Droid", Installed: false, Configured: false},
+	agents := []Agent{
+		{Name: "Claude Code", Command: "claude"},
+		{Name: "Codex CLI", Command: "codex"},
+		{Name: "Gemini CLI", Command: "gemini"},
+		{Name: "Amp CLI", Command: "amp"},
+		{Name: "OpenCode", Command: "opencode"},
+		{Name: "Aider", Command: "aider"},
 	}
+
+	// Check installation status for each agent
+	for i := range agents {
+		agents[i].Installed = checkCommandExists(agents[i].Command)
+		// Configuration check would require reading config files
+		// For now, mark as configured if installed
+		agents[i].Configured = agents[i].Installed
+	}
+
+	return agents
 }
 
 // RoutingStrategy represents load balancing strategy

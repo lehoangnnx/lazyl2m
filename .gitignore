@@ -19,7 +19,7 @@ go.work
 
 # Build artifacts
 /lazyl2m
-/quotio-tui
+
 
 # Config files (for development)
 .config/

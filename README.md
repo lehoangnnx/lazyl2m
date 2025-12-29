@@ -1,4 +1,4 @@
-# Quotio TUI
+# LazyL2M TUI
 
 A Go-based Terminal User Interface (TUI) application for managing CLIProxyAPI - a local proxy server for AI coding assistants.
 
@@ -31,7 +31,7 @@ This project is a TUI clone of [Quotio](https://github.com/nguyenphutrong/quotio
   - Success rate
   - Connected accounts overview
 - **Colored Logs** - Scrollable log viewer with level-based coloring
-- **Persistent Settings** - Configuration saved to `~/.config/quotio-tui/config.json`
+- **Persistent Settings** - Configuration saved to `~/.config/lazyl2m-tui/config.json`
 
 ## Technology Stack
 
@@ -57,10 +57,10 @@ cd lazyl2m
 go mod tidy
 
 # Build the application
-go build -o quotio-tui .
+go build -o lazyl2m .
 
 # Run the application
-./quotio-tui
+./lazyl2m
 ```
 
 ### Quick Run (without building)
@@ -113,7 +113,7 @@ The application has a sidebar navigation menu with 7 main screens:
 
 ### Configuration
 
-The application stores its configuration in `~/.config/quotio-tui/config.json`.
+The application stores its configuration in `~/.config/lazyl2m-tui/config.json`.
 
 #### Default Settings
 
@@ -222,7 +222,7 @@ go run .
 ### Building
 
 ```bash
-go build -o quotio-tui .
+go build -o lazyl2m-tui .
 ```
 
 ### Dependencies
@@ -260,7 +260,7 @@ Response formats should match the `AuthFile` and `UsageStats` structs defined in
 - Check logs screen for error messages
 
 ### Configuration not saving
-- Ensure write permissions to `~/.config/quotio-tui/`
+- Ensure write permissions to `~/.config/lazyl2m-tui/`
 - Check disk space
 - Review logs for error messages
 

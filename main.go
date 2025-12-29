@@ -18,13 +18,15 @@ func main() {
 
 	// Create proxy manager
 	pm := NewProxyManager(config)
-	pm.AddLogExternal(LogLevelInfo, "Quotio TUI started")
+	pm.AddLogExternal(LogLevelInfo, "LazyL2M TUI started")
 
-	// Auto-start if configured
-	if config.AutoStart {
+	// Auto-start if configured and binary is installed
+	if config.AutoStart && pm.IsBinaryInstalled() {
 		if err := pm.Start(); err != nil {
 			pm.AddLogExternal(LogLevelError, fmt.Sprintf("Failed to auto-start: %v", err))
 		}
+	} else if config.AutoStart && !pm.IsBinaryInstalled() {
+		pm.AddLogExternal(LogLevelWarn, "Auto-start enabled but CLIProxyAPI not installed. Press 'I' on dashboard to install.")
 	}
 
 	// Create tview application
@@ -50,22 +52,26 @@ func main() {
 		"settings":  settingsScreen,
 	}
 
-	// Create sidebar navigation
+	// Create sidebar navigation with enhanced styling
 	sidebar := tview.NewList().
 		ShowSecondaryText(false).
-		SetHighlightFullLine(true)
+		SetHighlightFullLine(true).
+		SetMainTextColor(tcell.ColorWhite).
+		SetSelectedTextColor(tcell.ColorBlack).
+		SetSelectedBackgroundColor(tcell.ColorDodgerBlue)
 
 	sidebar.
-		AddItem("📊 Dashboard (d)", "", 'd', nil).
-		AddItem("📈 Quota (q)", "", 'q', nil).
-		AddItem("🤖 Providers (p)", "", 'p', nil).
-		AddItem("⚙️  Agents (a)", "", 'a', nil).
-		AddItem("🔑 API Keys (k)", "", 'k', nil).
-		AddItem("📋 Logs (l)", "", 'l', nil).
-		AddItem("⚙️  Settings (s)", "", 's', nil).
-		AddItem("❌ Quit (x)", "", 'x', nil)
+		AddItem(" 📊 Dashboard", "", 'd', nil).
+		AddItem(" 📈 Quota", "", 'q', nil).
+		AddItem(" 🤖 Providers", "", 'p', nil).
+		AddItem(" ⚙️  Agents", "", 'a', nil).
+		AddItem(" 🔑 API Keys", "", 'k', nil).
+		AddItem(" 📋 Logs", "", 'l', nil).
+		AddItem(" 🔧 Settings", "", 0, nil).
+		AddItem("", "", 0, nil).
+		AddItem(" ❌ Quit", "", 'x', nil)
 
-	sidebar.SetBorder(true).SetTitle("Navigation")
+	sidebar.SetBorder(true).SetTitle(" ☰ Navigation ").SetBorderColor(tcell.ColorDodgerBlue).SetTitleColor(tcell.ColorLightCyan)
 
 	// Content area
 	content := tview.NewPages()
@@ -97,6 +103,15 @@ func main() {
 		app.SetFocus(content)
 	}
 
+	// Main layout with styled flex
+	mainFlex := tview.NewFlex().
+		AddItem(sidebar, 22, 0, true).
+		AddItem(content, 0, 1, false)
+
+	// Root pages for modal overlay support
+	rootPages := tview.NewPages().
+		AddPage("main", mainFlex, true, true)
+
 	// Handle sidebar selection
 	sidebar.SetSelectedFunc(func(index int, mainText string, secondaryText string, shortcut rune) {
 		switch index {
@@ -114,15 +129,10 @@ func main() {
 			switchScreen("logs", 5)
 		case 6:
 			switchScreen("settings", 6)
-		case 7:
-			app.Stop()
+		case 8: // Quit (index 8 because of empty separator at 7)
+			showQuitConfirmation(app, pm, rootPages, mainFlex)
 		}
 	})
-
-	// Main layout
-	mainFlex := tview.NewFlex().
-		AddItem(sidebar, 30, 0, true).
-		AddItem(content, 0, 1, false)
 
 	// Global key handler
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -156,18 +166,16 @@ func main() {
 		case 'l':
 			switchScreen("logs", 5)
 			return nil
-		case 's':
-			switchScreen("settings", 6)
-			return nil
-		case 'x':
-			app.Stop()
-			return nil
 		}
 
 		// Screen-specific keys
 		if currentScreen == "dashboard" {
 			switch event.Rune() {
 			case 's', 'S': // Toggle server
+				if !pm.IsBinaryInstalled() {
+					pm.AddLogExternal(LogLevelWarn, "Binary not installed. Press 'I' to install first")
+					return nil
+				}
 				status := pm.GetStatus()
 				if status.Running {
 					if err := pm.Stop(); err != nil {
@@ -186,6 +194,26 @@ func main() {
 				dashboardScreen.Update()
 				pm.AddLogExternal(LogLevelInfo, "Dashboard refreshed")
 				return nil
+			case 'i', 'I': // Install binary
+				if pm.IsBinaryInstalled() {
+					pm.AddLogExternal(LogLevelInfo, "CLIProxyAPI is already installed")
+					return nil
+				}
+				if pm.IsDownloading() {
+					pm.AddLogExternal(LogLevelInfo, "Download already in progress...")
+					return nil
+				}
+				pm.AddLogExternal(LogLevelInfo, "Starting CLIProxyAPI installation...")
+				go func() {
+					if err := pm.DownloadAndInstallBinary(); err != nil {
+						pm.AddLogExternal(LogLevelError, fmt.Sprintf("Installation failed: %v", err))
+					}
+					app.QueueUpdateDraw(func() {
+						dashboardScreen.Update()
+					})
+				}()
+				dashboardScreen.Update()
+				return nil
 			}
 		}
 
@@ -194,6 +222,33 @@ func main() {
 			case 'r', 'R': // Refresh
 				quotaScreen.Update()
 				pm.AddLogExternal(LogLevelInfo, "Quota data refreshed")
+				return nil
+			}
+		}
+
+		if currentScreen == "providers" {
+			if event.Key() == tcell.KeyEnter {
+				showProviderDetails(app, pm, providersScreen, rootPages, mainFlex)
+				return nil
+			}
+			switch event.Rune() {
+			case 'r', 'R': // Refresh
+				pm.FetchAuthFiles()
+				providersScreen.Update()
+				pm.AddLogExternal(LogLevelInfo, "Providers refreshed")
+				return nil
+			}
+		}
+
+		if currentScreen == "agents" {
+			if event.Key() == tcell.KeyEnter {
+				showAgentDetails(app, pm, agentsScreen, rootPages, mainFlex)
+				return nil
+			}
+			switch event.Rune() {
+			case 'r', 'R': // Refresh
+				agentsScreen.Update()
+				pm.AddLogExternal(LogLevelInfo, "Agents refreshed")
 				return nil
 			}
 		}
@@ -210,13 +265,28 @@ func main() {
 
 		if currentScreen == "apikeys" {
 			switch event.Rune() {
-			case 'g', 'G': // Generate new key
-				newKey := fmt.Sprintf("key_%d_%d", time.Now().Unix(), len(config.APIKeys)+1)
+			case 'g', 'G': // Generate new key using secure generation
+				newKey, err := GenerateSecureKey()
+				if err != nil {
+					pm.AddLogExternal(LogLevelError, fmt.Sprintf("Failed to generate key: %v", err))
+					return nil
+				}
 				config.APIKeys = append(config.APIKeys, newKey)
 				apiKeysScreen.Update()
-				pm.AddLogExternal(LogLevelInfo, "New API key generated")
+				pm.AddLogExternal(LogLevelInfo, "New secure API key generated")
+				return nil
+			case 'd', 'D': // Delete selected key
+				if len(config.APIKeys) > 0 {
+					showDeleteKeyConfirmation(app, pm, config, apiKeysScreen, rootPages, mainFlex)
+				}
 				return nil
 			}
+		}
+
+		// Handle 'x' for quit with confirmation
+		if event.Rune() == 'x' {
+			showQuitConfirmation(app, pm, rootPages, mainFlex)
+			return nil
 		}
 
 		return event
@@ -224,7 +294,7 @@ func main() {
 
 	// Background refresh ticker
 	go func() {
-		ticker := time.NewTicker(5 * time.Second)
+		ticker := time.NewTicker(15 * time.Second) // Increased to 15 seconds per quotio patterns
 		defer ticker.Stop()
 
 		for range ticker.C {
@@ -233,6 +303,10 @@ func main() {
 			if status.Running {
 				pm.FetchAuthFiles()
 				pm.FetchUsageStats()
+				pm.FetchQuotaInfo()
+			} else {
+				// Still scan auth directory even when not running
+				pm.FetchAuthFiles()
 			}
 
 			// Update current screen
@@ -245,7 +319,7 @@ func main() {
 	}()
 
 	// Run the application
-	if err := app.SetRoot(mainFlex, true).EnableMouse(true).Run(); err != nil {
+	if err := app.SetRoot(rootPages, true).EnableMouse(true).Run(); err != nil {
 		panic(err)
 	}
 
@@ -253,5 +327,143 @@ func main() {
 	if pm.GetStatus().Running {
 		pm.Stop()
 	}
-	pm.AddLogExternal(LogLevelInfo, "Quotio TUI stopped")
+	pm.AddLogExternal(LogLevelInfo, "LazyL2M TUI stopped")
+}
+
+// showQuitConfirmation displays a confirmation modal before quitting
+func showQuitConfirmation(app *tview.Application, pm *ProxyManager, rootPages *tview.Pages, mainFlex *tview.Flex) {
+	modal := tview.NewModal().
+		SetText("Are you sure you want to quit LazyL2M?").
+		AddButtons([]string{"Cancel", "Quit"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			if buttonLabel == "Quit" {
+				if pm.GetStatus().Running {
+					pm.Stop()
+				}
+				app.Stop()
+			} else {
+				// Remove modal and return to main
+				rootPages.RemovePage("modal")
+				app.SetFocus(mainFlex)
+			}
+		})
+	modal.SetBackgroundColor(tcell.ColorDarkSlateGray)
+	modal.SetTextColor(tcell.ColorWhite)
+	modal.SetButtonBackgroundColor(tcell.ColorDodgerBlue)
+
+	rootPages.AddPage("modal", modal, true, true)
+}
+
+// showDeleteKeyConfirmation displays a confirmation modal before deleting an API key
+func showDeleteKeyConfirmation(app *tview.Application, pm *ProxyManager, config *Config, apiKeysScreen *APIKeysScreen, rootPages *tview.Pages, mainFlex *tview.Flex) {
+	selectedIdx := apiKeysScreen.GetSelectedIndex()
+	if selectedIdx < 0 || selectedIdx >= len(config.APIKeys) {
+		return
+	}
+
+	modal := tview.NewModal().
+		SetText(fmt.Sprintf("Delete API Key #%d?\n\nThis action cannot be undone.", selectedIdx+1)).
+		AddButtons([]string{"Cancel", "Delete"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			if buttonLabel == "Delete" {
+				// Delete the key
+				config.APIKeys = append(config.APIKeys[:selectedIdx], config.APIKeys[selectedIdx+1:]...)
+				apiKeysScreen.Update()
+				pm.AddLogExternal(LogLevelInfo, fmt.Sprintf("API key #%d deleted", selectedIdx+1))
+				SaveConfig(config)
+			}
+			// Remove modal and return to main
+			rootPages.RemovePage("modal")
+			app.SetFocus(mainFlex)
+		})
+	modal.SetBackgroundColor(tcell.ColorDarkSlateGray)
+	modal.SetTextColor(tcell.ColorWhite)
+	modal.SetButtonBackgroundColor(tcell.ColorIndianRed)
+
+	rootPages.AddPage("modal", modal, true, true)
+}
+
+// showProviderDetails displays provider details and connected accounts
+func showProviderDetails(app *tview.Application, pm *ProxyManager, providersScreen *ProvidersScreen, rootPages *tview.Pages, mainFlex *tview.Flex) {
+	provider, info, count := providersScreen.GetSelectedProvider()
+	if provider == "" {
+		return
+	}
+
+	// Build accounts list
+	accounts := providersScreen.GetAccountsForProvider(provider)
+	accountsList := ""
+	if len(accounts) == 0 {
+		accountsList = "\n\nNo accounts connected."
+	} else {
+		accountsList = "\n\nConnected accounts:\n"
+		for _, acc := range accounts {
+			statusIcon := "✓"
+			if acc.Status != "active" {
+				statusIcon = "✗"
+			}
+			accountsList += fmt.Sprintf("  %s %s (%s)\n", statusIcon, acc.Email, acc.Status)
+		}
+	}
+
+	modalText := fmt.Sprintf("%s %s\n\n%d account(s) connected%s",
+		info.Symbol, info.Name, count, accountsList)
+
+	modal := tview.NewModal().
+		SetText(modalText).
+		AddButtons([]string{"Close"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			rootPages.RemovePage("modal")
+			app.SetFocus(mainFlex)
+		})
+	modal.SetBackgroundColor(tcell.ColorDarkSlateGray)
+	modal.SetTextColor(tcell.ColorWhite)
+	modal.SetButtonBackgroundColor(tcell.ColorDodgerBlue)
+
+	rootPages.AddPage("modal", modal, true, true)
+}
+
+// showAgentDetails displays agent configuration details
+func showAgentDetails(app *tview.Application, pm *ProxyManager, agentsScreen *AgentsScreen, rootPages *tview.Pages, mainFlex *tview.Flex) {
+	agent := agentsScreen.GetSelectedAgent()
+	if agent == nil {
+		return
+	}
+
+	// Build status info
+	installedStatus := "❌ Not Installed"
+	if agent.Installed {
+		installedStatus = "✅ Installed"
+	}
+
+	configuredStatus := "❌ Not Configured"
+	if agent.Configured {
+		configuredStatus = "✅ Configured"
+	}
+
+	// Configuration instructions
+	instructions := ""
+	if !agent.Installed {
+		instructions = fmt.Sprintf("\n\nTo install:\n  Install '%s' CLI tool first.", agent.Command)
+	} else if !agent.Configured {
+		instructions = fmt.Sprintf("\n\nTo configure:\n  Set environment variables or\n  update %s config to use:\n  %s", agent.Command, pm.GetEndpoint())
+	} else {
+		instructions = fmt.Sprintf("\n\nEndpoint: %s", pm.GetEndpoint())
+	}
+
+	modalText := fmt.Sprintf("%s\n\n%s\n%s%s",
+		agent.Name, installedStatus, configuredStatus, instructions)
+
+	modal := tview.NewModal().
+		SetText(modalText).
+		AddButtons([]string{"Close"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			rootPages.RemovePage("modal")
+			app.SetFocus(mainFlex)
+		})
+	modal.SetBackgroundColor(tcell.ColorDarkSlateGray)
+	modal.SetTextColor(tcell.ColorWhite)
+	modal.SetButtonBackgroundColor(tcell.ColorDodgerBlue)
+
+	rootPages.AddPage("modal", modal, true, true)
 }

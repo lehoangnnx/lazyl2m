@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	configDir  = ".config/quotio-tui"
+	configDir  = ".config/lazyl2m-tui"
 	configFile = "config.json"
 )
 
