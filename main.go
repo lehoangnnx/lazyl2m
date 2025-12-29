@@ -201,9 +201,7 @@ func main() {
 		if currentScreen == "logs" {
 			switch event.Rune() {
 			case 'c', 'C': // Clear logs
-				pm.mutex.Lock()
-				pm.logEntries = []LogEntry{}
-				pm.mutex.Unlock()
+				pm.ClearLogs()
 				logsScreen.Update()
 				pm.AddLogExternal(LogLevelInfo, "Logs cleared")
 				return nil

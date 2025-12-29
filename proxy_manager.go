@@ -244,6 +244,13 @@ func (pm *ProxyManager) AddLogExternal(level LogLevel, message string) {
 	pm.AddLog(level, message)
 }
 
+// ClearLogs clears all log entries
+func (pm *ProxyManager) ClearLogs() {
+	pm.mutex.Lock()
+	defer pm.mutex.Unlock()
+	pm.logEntries = []LogEntry{}
+}
+
 // Mock data generators for when API is not available
 
 func (pm *ProxyManager) getMockAuthFiles() []AuthFile {
